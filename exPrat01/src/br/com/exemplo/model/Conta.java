@@ -7,7 +7,7 @@ public abstract class Conta {
 
     private  int numero;
     private  String titular;
-    private  double saldo;
+    private  double saldoo;
 
     Conta(int numero, String titular, double saldo) {
         this.numero = numero;
