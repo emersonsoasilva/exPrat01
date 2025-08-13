@@ -5,9 +5,9 @@ import br.com.exemplo.exception.SaldoInsuficienteException;
 
 public abstract class Conta {
 
-    private  int numero;
-    private  String titular;
-    private  double saldoo;
+    protected  int numero;
+    protected  String titular;
+    protected  double saldo;
 
     Conta(int numero, String titular, double saldo) {
         this.numero = numero;
@@ -17,8 +17,10 @@ public abstract class Conta {
 
     abstract void sacar(double valor) throws SaldoInsuficienteException;
 
-    public double depositar(double valor) {
-            return valor += saldo;
+    public void depositar(double valor) {
+        if (valor > 0) {
+            valor += saldo;
+        }       
     }
 
     public void ImprimirDados() {
@@ -27,5 +29,26 @@ public abstract class Conta {
         System.out.println("Saldo atual: R$ " + String.format("%.2f", saldo));
     }
 
+    public int getNumero() { 
+        return numero;
+    }
+    public String getTitular() {
+        return titular;
+    }
+    public double getSaldo() { 
+        return saldo;
+    }
+
+    public void setNumero(int numero) {
+        this.numero = numero;
+    }
+
+    public void setTitular(String titular) {
+        this.titular = titular;
+    }
+
+    public void setSaldo(double saldo) {
+        this.saldo = saldo;
+    }
 
 }
