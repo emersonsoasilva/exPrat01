@@ -10,7 +10,7 @@ import br.com.gcbank.service.ContaService;
 
 public class App {
     public static void main(String[] args) throws Exception {
-        ContaService cs = new ContaService();
+ContaService cs = new ContaService();
 
         try {
             ContaCorrente conta = cs.lerConta("conta.txt");

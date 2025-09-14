@@ -4,6 +4,8 @@ import br.com.gcbank.exceptions.SaldoInsuficienteException;
 import br.com.gcbank.model.ContaCorrente;
 import br.com.gcbank.model.Conta;
 import br.com.gcbank.service.ContaService;
+import br.com.gcbank.strategy.TarifaStrategy;
+
 import java.util.ArrayList;
 import static java.util.stream.Collectors.*;
 import java.util.Map;
@@ -28,10 +30,10 @@ public class ContaGUI extends javax.swing.JFrame {
      */
     
     private ContaCorrente conta;
-    private ContaService contaService;
+    private ContaService ContaService;
     
     public ContaGUI() {
-        this.contaService = new ContaService();
+        this.ContaService = new ContaService();
         initComponents();
         carregarDados();
         atualizarTabela();
@@ -44,8 +46,8 @@ public class ContaGUI extends javax.swing.JFrame {
         TabelaContas.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) { 
                 int index = TabelaContas.getSelectedRow();
-                if (index >= 0 && index < contaService.getContas().size()) {
-                    conta = contaService.getContas().get(index);
+                if (index >= 0 && index < ContaService.getContas().size()) {
+                    conta = ContaService.getContas().get(index);
                     txtNumero.setText(String.valueOf(conta.getNumero()));
                     txtTitular.setText(conta.getTitular());
                     txtSaldo.setText("R$ " + String.format("%.2f", conta.getSaldo()));
@@ -56,7 +58,7 @@ public class ContaGUI extends javax.swing.JFrame {
         TabelaContas.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && TabelaContas.getSelectedRow() >= 0) {
                 int linha = TabelaContas.getSelectedRow();
-                model.ContaCorrente conta = contaService.getContas().get(linha);
+                br.com.gcbank.model.ContaCorrente conta = ContaService.getContas().get(linha);
 
                 txtNumero.setText(String.valueOf(conta.getNumero()));
                 txtTitular.setText(conta.getTitular());
@@ -66,7 +68,7 @@ public class ContaGUI extends javax.swing.JFrame {
     }
     
     private void aplicarTarifa(TarifaStrategy strategy) {
-        List<ContaCorrente> contas = contaService.getContas();
+        List<ContaCorrente> contas = ContaService.getContas();
 
         txtAreaArquivo.setText("\nTarifas (" + strategy + "):\n\n");
 
@@ -81,7 +83,7 @@ public class ContaGUI extends javax.swing.JFrame {
     
     private void carregarDados() {    
         try {
-            List<ContaCorrente> contas = contaService.carregarTodasContas();
+            List<ContaCorrente> contas = ContaService.carregarTodasContas();
 
             DefaultTableModel model = (DefaultTableModel) TabelaContas.getModel();
             model.setRowCount(0);
@@ -242,7 +244,7 @@ public class ContaGUI extends javax.swing.JFrame {
                 {null, null, null}
             },
             new String [] {
-                "Numero Conta", "Nome", "Saldo"
+                "No. da Conta", "Nome", "Saldo"
             }
         ));
         jScrollPane4.setViewportView(TabelaContas);
@@ -540,7 +542,7 @@ public class ContaGUI extends javax.swing.JFrame {
             try {
             double valor = Double.parseDouble(txtSaque.getText().trim());
 
-            contaService.sacarValor(conta, valor);
+            ContaService.sacarValor(conta, valor);
 
             txtSaldo.setText("R$ " + String.format("%.2f", conta.getSaldo()));
 
@@ -562,7 +564,7 @@ public class ContaGUI extends javax.swing.JFrame {
                 txtAreaArquivo.append("Tentativa de saque inválida: " + ex.getMessage() + "\n\n");
             }
             try {
-                contaService.salvarContas("contas_atualizadas.txt");
+                ContaService.salvarContas("contas_atualizadas.txt");
                 txtAreaArquivo.append("Contas salvas em contas_atualizadas.txt\n\n");
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(this, "Erro ao salvar contas: " + ex.getMessage(),
@@ -576,7 +578,7 @@ public class ContaGUI extends javax.swing.JFrame {
         try {
             double valor = Double.parseDouble(txtSaque.getText().trim());
 
-            contaService.depositarValor(conta, valor);
+            ContaService.depositarValor(conta, valor);
 
             txtSaldo.setText("R$ " + String.format("%.2f", conta.getSaldo()));
 
@@ -594,7 +596,7 @@ public class ContaGUI extends javax.swing.JFrame {
                                               "Erro", JOptionPane.ERROR_MESSAGE);
          }
          try {
-            contaService.salvarContas("contas_atualizadas.txt");
+            ContaService.salvarContas("contas_atualizadas.txt");
             txtAreaArquivo.append("Contas salvas em contas_atualizadas.txt\n\n");
          } catch (IOException ex) {
             JOptionPane.showMessageDialog(this, "Erro ao salvar contas: " + ex.getMessage(),
@@ -609,7 +611,7 @@ public class ContaGUI extends javax.swing.JFrame {
 
     model.setRowCount(0);
 
-    ArrayList<ContaCorrente> contas = contaService.getContas();
+    ArrayList<ContaCorrente> contas = ContaService.getContas();
     for (ContaCorrente c : contas) {
         model.addRow(new Object[] {
             c.getNumero(),
@@ -638,7 +640,7 @@ public class ContaGUI extends javax.swing.JFrame {
             saldoInicial = Double.parseDouble(saldoTxt);
         }
 
-        java.util.ArrayList<model.ContaCorrente> lista = contaService.getContas();
+        java.util.ArrayList<br.com.gcbank.model.ContaCorrente> lista = ContaService.getContas();
         for (int i = 0; i < lista.size(); i++) {
             if (lista.get(i).getNumero() == numero) {
                 javax.swing.JOptionPane.showMessageDialog(this,
@@ -648,12 +650,12 @@ public class ContaGUI extends javax.swing.JFrame {
             }
         }
 
-        model.ContaCorrente nova = new model.ContaCorrente(numero, titular, saldoInicial);
-        contaService.adicionarConta(nova);
+        br.com.gcbank.model.ContaCorrente nova = new br.com.gcbank.model.ContaCorrente(numero, titular, saldoInicial);
+        ContaService.adicionarConta(nova);
 
         atualizarTabela();
 
-        int idx = contaService.getContas().size() - 1;
+        int idx = ContaService.getContas().size() - 1;
         if (idx >= 0 && idx < TabelaContas.getRowCount()) {
             TabelaContas.setRowSelectionInterval(idx, idx);
         }
@@ -671,7 +673,7 @@ public class ContaGUI extends javax.swing.JFrame {
         txtSaldo.setText("");
         
         try {
-            contaService.salvarContas("contas_atualizadas.txt");
+            ContaService.salvarContas("contas_atualizadas.txt");
             txtAreaArquivo.append("Contas salvas em contas_atualizadas.txt\n");
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(this, "Erro ao salvar contas: " + ex.getMessage(),
@@ -682,7 +684,7 @@ public class ContaGUI extends javax.swing.JFrame {
 
     private void SaldoTotalActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SaldoTotalActionPerformed
         
-        double saldoTotal = contaService.getContas().stream()
+        double saldoTotal = ContaService.getContas().stream()
                 .map(contas -> contas.getSaldo())
                 .reduce(0.0, (a, b) -> a + b);
         
@@ -693,7 +695,7 @@ public class ContaGUI extends javax.swing.JFrame {
         // TODO add your handling code here:
         txtAreaArquivo.append("Contas com o saldo acima de R$ 10.000,00\n\n");
         
-        contaService.getContas().stream()
+        ContaService.getContas().stream()
                 .filter(conta -> conta.getSaldo() > 10000)
                 .forEach(conta -> txtAreaArquivo.append(
                         String.format("Conta %d | %s | Saldo: R$ %.2f\n",
@@ -703,7 +705,7 @@ public class ContaGUI extends javax.swing.JFrame {
 
     
     private void AgruparFaixaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AgruparFaixaActionPerformed
-        Map<String, List<ContaCorrente>> agruparFaixa = contaService.getContas().stream()
+        Map<String, List<ContaCorrente>> agruparFaixa = ContaService.getContas().stream()
                 .collect(groupingBy(
                         conta -> {
                             if (conta.getSaldo() <= 5000) return "Até R$5000,00";
@@ -724,7 +726,7 @@ public class ContaGUI extends javax.swing.JFrame {
         
         Predicate<Conta> salarioMaior = s -> s.getSaldo() > 5000 && s.getNumero() % 2 == 0;
         
-        List<Conta> filtrados = contaService.getContas().stream()
+        List<Conta> filtrados = ContaService.getContas().stream()
                 .filter(salarioMaior)
                 .collect(Collectors.toList());
         
@@ -738,7 +740,7 @@ public class ContaGUI extends javax.swing.JFrame {
         // TODO add your handling code here:
        Comparator<Conta> ordenacaoNomes = (t1, t2) -> t1.getTitular().compareTo(t2.getTitular());
        
-       List<Conta> nomesOrdenados = contaService.getContas().stream()
+       List<Conta> nomesOrdenados = ContaService.getContas().stream()
                .sorted(ordenacaoNomes)
                .collect(Collectors.toList());
        
@@ -753,7 +755,7 @@ public class ContaGUI extends javax.swing.JFrame {
     private void SalarioDecrescenteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SalarioDecrescenteActionPerformed
         Comparator<Conta> salarioDecrescente = (s1, s2) -> Double.compare(s2.getSaldo(), s1.getSaldo());
         
-        List<Conta> salariosOrdenados = contaService.getContas().stream()
+        List<Conta> salariosOrdenados = ContaService.getContas().stream()
                .sorted(salarioDecrescente)
                .collect(Collectors.toList());
         
@@ -771,7 +773,7 @@ public class ContaGUI extends javax.swing.JFrame {
             double valor = Double.parseDouble(ValorTxt.getText().trim());
 
             
-            contaService.transferir(numeroOrigem, numeroDestino, valor);
+            ContaService.transferir(numeroOrigem, numeroDestino, valor);
 
             txtAreaArquivo.append("Transferência realizada com sucesso!");
 
@@ -789,7 +791,7 @@ public class ContaGUI extends javax.swing.JFrame {
         try {
             int numeroBusca = Integer.parseInt(BuscaNumeroTxT.getText().trim());
             
-            Conta contaEncontrada = contaService.buscarConta(numeroBusca);
+            Conta contaEncontrada = ContaService.buscarConta(numeroBusca);
             
             txtAreaArquivo.append("Conta Encontrada!:\n\n");
             txtAreaArquivo.append("Numero da Conta: " + contaEncontrada.getNumero());
@@ -812,7 +814,7 @@ public class ContaGUI extends javax.swing.JFrame {
         try {
             int numeroRemover = Integer.parseInt(RemoverTxt.getText().trim());
             
-            contaService.removerConta(numeroRemover);
+            ContaService.removerConta(numeroRemover);
             
             carregarDados();
             
@@ -830,7 +832,7 @@ public class ContaGUI extends javax.swing.JFrame {
 
     private void ListarContasTxtActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ListarContasTxtActionPerformed
         try {
-            List<ContaCorrente> contas = contaService.carregarTodasContas();
+            List<ContaCorrente> contas = ContaService.carregarTodasContas();
             
             txtAreaArquivo.append("Contas Registradas:\n\n");
             
