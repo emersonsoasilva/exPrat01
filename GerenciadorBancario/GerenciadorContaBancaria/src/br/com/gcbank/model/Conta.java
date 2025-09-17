@@ -24,7 +24,7 @@ public abstract class Conta {
     public void imprimirDados() {
         System.out.println("Conta: " + numero);
         System.out.println("Titular: " + titular);
-        System.out.println("Saldo atual: R$ " + saldo);
+        System.out.println("Saldo atual: R$ " + String.format("%.2f", saldo));
     }
 
     // Getters and Setters

@@ -12,31 +12,27 @@ public class ContaCorrente extends Conta{
 
     @Override
     public void sacar(double valor) throws SaldoInsuficienteException {
-        if (valor < saldo) {
-            saldo -= valor;
-        
-        }
 
-        else if (valor == 0) {
+        if (valor <= 0) {
             System.out.println("Erro: Valor para saque deve ser maior que 0!");
         }
 
-        else if (valor > saldo) {
+        if (valor > saldo) {
             throw new SaldoInsuficienteException("Erro: Saldo insuficiente para saque!");
         }
+
+        saldo -= valor;
     }
 
 
     @Override
     public void depositar(double valor) {
-        if (valor == 0) {
+        if (valor <= 0) {
             System.out.println("Erro: Valor para depósito deve ser maior que zero!");
 
         }
 
-        else {
             saldo += valor;
-        }
     }
     
 }
