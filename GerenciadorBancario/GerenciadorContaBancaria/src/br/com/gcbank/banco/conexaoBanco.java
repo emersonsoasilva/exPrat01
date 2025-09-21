@@ -8,7 +8,7 @@ public class conexaoBanco {
     // Ajuste conforme seu ambiente:
     private static final String URL = "jdbc:mysql://localhost:3306/banco_digital";
     private static final String USER = "root";
-    private static final String PASS = "SENHA";
+    private static final String PASS = "senha";
 
     // Força o carregamento do driver (evita "No suitable driver found" se o .jar não estiver resolvendo sozinho)
     static {
