@@ -1,134 +1,140 @@
 package br.com.gcbank.banco;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import br.com.gcbank.model.Conta;
+import br.com.gcbank.exceptions.SaldoInsuficienteException;
 import br.com.gcbank.model.ContaCorrente;
 
 public class contaDAO {
-      public void inserir(Conta conta) {
-        String sql = "INSERT INTO conta (numero, titular, saldo) VALUES (?, ?, ?)";
-        try (Connection conn = conexaoBanco.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, conta.getNumero());
-            stmt.setString(2, conta.getTitular());
-            stmt.setDouble(3, conta.getSaldo());
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+ public void inserir(ContaCorrente c) throws SQLException {
+        String sql = "INSERT INTO contas (numero, titular, saldo) VALUES (?, ?, ?)";
+        try (Connection con = conexaoBanco.abrir();
+            PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, c.getNumero());
+            ps.setString(2, c.getTitular());
+            ps.setBigDecimal(3, BigDecimal.valueOf(c.getSaldo()));
+            ps.executeUpdate();
         }
     }
 
-    public List<Conta> listar() {
-        List<Conta> contas = new ArrayList<>();
-        String sql = "SELECT * FROM conta";
-        try (Connection conn = conexaoBanco.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
+    public List<ContaCorrente> listar() throws SQLException {
+        String sql = "SELECT numero, titular, saldo FROM contas ORDER BY numero";
+        List<ContaCorrente> lista = new ArrayList<>();
+        try (Connection con = conexaoBanco.abrir();
+            PreparedStatement ps = con.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                Conta c = new ContaCorrente(
+                lista.add(new ContaCorrente(
                         rs.getInt("numero"),
                         rs.getString("titular"),
-                        rs.getDouble("saldo")
-                );
-                contas.add(c);
+                        rs.getBigDecimal("saldo").doubleValue()
+                ));
             }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-        return contas;
+        return lista;
     }
 
-    public Conta buscarPorNumero(int numero) {
-        String sql = "SELECT * FROM conta WHERE numero = ?";
-        try (Connection conn = conexaoBanco.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, numero);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return new ContaCorrente(
-                        rs.getInt("numero"),
-                        rs.getString("titular"),
-                        rs.getDouble("saldo")
-                );
+    public Optional<ContaCorrente> buscarPorNumero(int numero) throws SQLException {
+        String sql = "SELECT numero, titular, saldo FROM contas WHERE numero = ?";
+        try (Connection con = conexaoBanco.abrir();
+            PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, numero);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(new ContaCorrente(
+                            rs.getInt("numero"),
+                            rs.getString("titular"),
+                            rs.getBigDecimal("saldo").doubleValue()
+                    ));
+                }
             }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-        return null;
+        return Optional.empty();
     }
 
-    public void atualizarSaldo(int numero, double novoSaldo) {
-        String sql = "UPDATE conta SET saldo= ? WHERE numero = ?";
-        try (Connection conn = conexaoBanco.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setDouble(1, novoSaldo);
-            stmt.setInt(2, numero);
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public boolean atualizarSaldo(int numero, double novoSaldo) throws SQLException {
+        String sql = "UPDATE contas SET saldo = ? WHERE numero = ?";
+        try (Connection con = conexaoBanco.abrir();
+            PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setBigDecimal(1, BigDecimal.valueOf(novoSaldo));
+            ps.setInt(2, numero);
+            return ps.executeUpdate() > 0;
         }
     }
 
-    public void remover(int numero) { 
-        String sql = "DELETE FROM conta WHERE numero = ?";
-        try (Connection conn = conexaoBanco.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, numero);
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public boolean remover(int numero) throws SQLException {
+        String sql = "DELETE FROM contas WHERE numero = ?";
+        try (Connection con = conexaoBanco.abrir();
+            PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, numero);
+            return ps.executeUpdate() > 0;
         }
     }
-    
-    public void transferir(int numeroOrigem, int numeroDestino, double valor) {
-    String debitoSQL = "UPDATE conta SET saldo = saldo - ? WHERE numero = ?";
-    String creditoSQL = "UPDATE conta SET saldo = saldo + ? WHERE numero = ?";
 
-    try (Connection conn = conexaoBanco.getConnection()) {
-        conn.setAutoCommit(false); 
+    // ===== Transferência com transação =====
+    public void transferir(int numeroOrigem, int numeroDestino, double valor)
+            throws SQLException, IllegalArgumentException, SaldoInsuficienteException {
 
-        try (PreparedStatement debitoStmt = conn.prepareStatement(debitoSQL);
-             PreparedStatement creditoStmt = conn.prepareStatement(creditoSQL)) {
+        if (numeroOrigem == numeroDestino) throw new IllegalArgumentException("Contas de origem e destino devem ser diferentes.");
+        if (valor <= 0) throw new IllegalArgumentException("Valor de transferência inválido.");
 
-            debitoStmt.setDouble(1, valor);
-            debitoStmt.setInt(2, numeroOrigem);
-            debitoStmt.executeUpdate();
+        String lockSql = "SELECT numero, saldo FROM contas WHERE numero IN (?, ?) FOR UPDATE";
+        String updSql  = "UPDATE contas SET saldo = ? WHERE numero = ?";
 
-            creditoStmt.setDouble(1, valor);
-            creditoStmt.setInt(2, numeroDestino);
-            creditoStmt.executeUpdate();
+        try (Connection con = conexaoBanco.abrir()) {
+            con.setAutoCommit(false);
+            try (PreparedStatement lock = con.prepareStatement(lockSql);
+                PreparedStatement upd  = con.prepareStatement(updSql)) {
 
-            conn.commit();
+                lock.setInt(1, numeroOrigem);
+                lock.setInt(2, numeroDestino);
 
-        } catch (SQLException e) {
-            conn.rollback(); 
-            e.printStackTrace();
-        } finally {
-            conn.setAutoCommit(true);
+                Double saldoOrigem = null, saldoDestino = null;
+                try (ResultSet rs = lock.executeQuery()) {
+                    while (rs.next()) {
+                        int num = rs.getInt("numero");
+                        double s = rs.getBigDecimal("saldo").doubleValue();
+                        if (num == numeroOrigem)  saldoOrigem = s;
+                        if (num == numeroDestino) saldoDestino = s;
+                    }
+                }
+
+                if (saldoOrigem == null || saldoDestino == null) {
+                    throw new IllegalArgumentException("Conta de origem ou destino inexistente.");
+                }
+                if (saldoOrigem < valor) {
+                    throw new SaldoInsuficienteException(
+                            String.format("Saldo insuficiente na conta %d (saldo=%.2f, valor=%.2f).",
+                                    numeroOrigem, saldoOrigem, valor));
+                }
+
+                // debita origem
+                upd.setBigDecimal(1, BigDecimal.valueOf(saldoOrigem - valor));
+                upd.setInt(2, numeroOrigem);
+                upd.executeUpdate();
+
+                // credita destino
+                upd.setBigDecimal(1, BigDecimal.valueOf(saldoDestino + valor));
+                upd.setInt(2, numeroDestino);
+                upd.executeUpdate();
+
+                con.commit();
+            } catch (Exception e) {
+                con.rollback();
+                if (e instanceof SQLException se) throw se;
+                if (e instanceof IllegalArgumentException iae) throw iae;
+                if (e instanceof SaldoInsuficienteException sie) throw sie;
+                throw new SQLException("Erro: Falha na transferência!", e);
+            } finally {
+                con.setAutoCommit(true);
+            }
         }
-
-    } catch (SQLException e) {
-        e.printStackTrace();
     }
 }
-
-}
-
